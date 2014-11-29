@@ -13,6 +13,7 @@ use dom::bindings::utils::{Reflectable, Reflector};
 use dom::eventtarget::{EventTarget, EventTargetHelpers};
 use dom::eventtarget::WorkerGlobalScopeTypeId;
 use dom::messageevent::MessageEvent;
+//use dom::errorevent::ErrorEvent;
 use dom::worker::{Worker, TrustedWorkerAddress};
 use dom::workerglobalscope::DedicatedGlobalScope;
 use dom::workerglobalscope::WorkerGlobalScope;
@@ -20,6 +21,7 @@ use dom::xmlhttprequest::XMLHttpRequest;
 use script_task::{ScriptTask, ScriptChan};
 use script_task::{ScriptMsg, DOMMessage, XHRProgressMsg, WorkerRelease};
 use script_task::WorkerPostMessage;
+use script_task::WorkerDispatchErrorEvent;
 use script_task::StackRootTLS;
 
 use servo_net::resource_task::{ResourceTask, load_whole_resource};
@@ -139,6 +141,9 @@ impl DedicatedWorkerGlobalScope {
                     Ok(WorkerPostMessage(addr, data, nbytes)) => {
                         Worker::handle_message(addr, data, nbytes);
                     },
+                    Ok(WorkerDispatchErrorEvent(addr, data, nbytes)) => {
+                        Worker::handle_message(addr, data, nbytes);
+                    },
                     Ok(WorkerRelease(addr)) => {
                         Worker::handle_release(addr)
                     },
@@ -162,7 +167,6 @@ impl<'a> DedicatedWorkerGlobalScopeMethods for JSRef<'a, DedicatedWorkerGlobalSc
         let ScriptChan(ref sender) = self.parent_sender;
         sender.send(WorkerPostMessage(self.worker, data, nbytes));
     }
-
     fn GetOnmessage(self) -> Option<EventHandlerNonNull> {
         let eventtarget: JSRef<EventTarget> = EventTargetCast::from_ref(self);
         eventtarget.get_event_handler_common("message")
@@ -176,12 +180,25 @@ impl<'a> DedicatedWorkerGlobalScopeMethods for JSRef<'a, DedicatedWorkerGlobalSc
 
 trait PrivateDedicatedWorkerGlobalScopeHelpers {
     fn delayed_release_worker(self);
+    fn SendMessage(self, cx: *mut JSContext, message: JSVal);
 }
 
 impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerGlobalScope> {
     fn delayed_release_worker(self) {
         let ScriptChan(ref sender) = self.parent_sender;
         sender.send(WorkerRelease(self.worker));
+    }
+    fn SendMessage(self, cx: *mut JSContext, message: JSVal) {
+
+        let mut data = ptr::null_mut(); //here, initialize data with the parameters required to create the ErrorEvent
+
+        let mut nbytes = 0;
+        unsafe {
+            assert!(JS_WriteStructuredClone(cx, message, &mut data, &mut nbytes,
+                                            ptr::null(), ptr::null_mut()) != 0);
+        }
+        let ScriptChan(ref sender) = self.parent_sender;
+        sender.send(WorkerDispatchErrorEvent(self.worker, data, nbytes));
     }
 }
 

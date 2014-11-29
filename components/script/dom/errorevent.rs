@@ -17,12 +17,11 @@ use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::event::{Event, EventTypeId, ErrorEventTypeId};
 use dom::window::Window;
 use servo_util::str::DOMString;
-
 use dom::bindings::cell::DOMRefCell;
 use std::cell::{Cell};
 use js::jsval::{JSVal, NullValue};
 
-#[dom_struct]
+
 #[privatize]
 #[must_root]
 #[jstraceable]
@@ -42,6 +41,7 @@ impl ErrorEventDerived for Event {
 }
 
 impl ErrorEvent {
+     
     fn new_inherited(type_id: EventTypeId) -> ErrorEvent {
         ErrorEvent {
             event: Event::new_inherited(type_id),

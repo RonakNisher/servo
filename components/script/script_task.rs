@@ -97,6 +97,8 @@ pub enum ScriptMsg {
     DOMMessage(*mut u64, size_t),
     /// Posts a message to the Worker object (dispatched to all tasks).
     WorkerPostMessage(TrustedWorkerAddress, *mut u64, size_t),
+    /// Sends a message to the Worker object (dispatched to all tasks) regarding error.
+    WorkerDispatchErrorEvent(TrustedWorkerAddress, *mut u64, size_t),
     /// Releases one reference to the Worker object (dispatched to all tasks).
     WorkerRelease(TrustedWorkerAddress),
 }
@@ -507,6 +509,7 @@ impl ScriptTask {
                 FromScript(XHRProgressMsg(addr, progress)) => XMLHttpRequest::handle_xhr_progress(addr, progress),
                 FromScript(DOMMessage(..)) => fail!("unexpected message"),
                 FromScript(WorkerPostMessage(addr, data, nbytes)) => Worker::handle_message(addr, data, nbytes),
+                FromScript(WorkerDispatchErrorEvent(addr, data, nbytes)) => Worker::handle_error_message(addr, data, nbytes),
                 FromScript(WorkerRelease(addr)) => Worker::handle_release(addr),
                 FromDevtools(EvaluateJS(id, s, reply)) => self.handle_evaluate_js(id, s, reply),
                 FromDevtools(GetRootNode(id, reply)) => self.handle_get_root_node(id, reply),

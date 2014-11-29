@@ -98,6 +98,24 @@ impl Worker {
         let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
         MessageEvent::dispatch_jsval(target, &global.root_ref(), message);
     }
+
+   pub fn handle_error_message(address: TrustedWorkerAddress,
+                          data: *mut u64, nbytes: size_t) {
+        let worker = unsafe { JS::from_trusted_worker_address(address).root() };
+
+        let global = worker.global.root();
+
+        let mut message = UndefinedValue();
+        unsafe {
+            assert!(JS_ReadStructuredClone(
+                global.root_ref().get_cx(), data as *const u64, nbytes,
+                JS_STRUCTURED_CLONE_VERSION, &mut message,
+                ptr::null(), ptr::null_mut()) != 0);
+        }
+
+        let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
+        MessageEvent::dispatch_jsval(target, &global.root_ref(), message);
+    }
 }
 
 impl Worker {
@@ -130,6 +148,8 @@ impl Worker {
         let worker = unsafe { JS::from_trusted_worker_address(address).root() };
         worker.release();
     }
+
+
 }
 
 impl<'a> WorkerMethods for JSRef<'a, Worker> {

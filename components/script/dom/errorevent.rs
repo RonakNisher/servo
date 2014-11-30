@@ -21,7 +21,7 @@ use dom::bindings::cell::DOMRefCell;
 use std::cell::{Cell};
 use js::jsval::{JSVal, NullValue};
 
-
+#[dom_struct]
 #[privatize]
 #[must_root]
 #[jstraceable]

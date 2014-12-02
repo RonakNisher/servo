@@ -5,12 +5,8 @@
 //! The script task is the task that owns the DOM in memory, runs JavaScript, and spawns parsing
 //! and layout tasks.
 
-use dom::bindings::error::Fallible;
-use dom::bindings::global::GlobalRef;
 use servo_util::str::DOMString;
 use js::jsval::JSVal;
-use dom::window;
-
 use dom::bindings::codegen::Bindings::DocumentBinding::DocumentMethods;
 use dom::bindings::codegen::Bindings::DOMRectBinding::DOMRectMethods;
 use dom::bindings::codegen::Bindings::ElementBinding::ElementMethods;

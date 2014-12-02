@@ -4,9 +4,9 @@
 //use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
 //use dom::bindings::codegen::Bindings::ErrorEventBinding;
 //use dom::bindings::codegen::Bindings::ErrorEventBinding::ErrorEventMethods;
-//use dom::event::Event;
-//use dom::bindings::codegen::InheritTypes::EventCast;
-//use dom::errorevent::ErrorEvent;
+use dom::event::Event;
+use dom::bindings::codegen::InheritTypes::EventCast;
+use dom::errorevent::ErrorEvent;
 //use dom::bindings::global;
 //use dom::window::Window;
 
@@ -119,16 +119,19 @@ impl Worker {
         let worker = unsafe { JS::from_trusted_worker_address(address).root() };
 
         let global = worker.global.root();
-	//let global_ref = global.root_ref();
-        let mut message = UndefinedValue();
-        
 
+	let global_ref = global.root_ref();
+        
         let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
-	//let errorevent = ErrorEvent::new(
-       //     scope, "message".to_string(), false, false, message,
-        //    "".to_string(), "".to_string()).root();
-       // let event: JSRef<Event> = EventCast::from_ref(*errorevent);
-       // target.dispatch_event_with_target(None, event).unwrap();
+	
+	let errorevent = ErrorEvent::new(&global_ref, type_,
+                                can_bubble, cancelable,
+                                message, filename,
+                                lineno, colno, error).root();
+       
+        let event: JSRef<Event> = EventCast::from_ref(*errorevent);
+
+        target.dispatch_event_with_target(Some(target), event).unwrap();
         
     }
 }

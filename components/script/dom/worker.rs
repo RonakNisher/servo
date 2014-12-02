@@ -92,9 +92,7 @@ impl Worker {
     pub fn handle_message(address: TrustedWorkerAddress,
                           data: *mut u64, nbytes: size_t) {
         let worker = unsafe { JS::from_trusted_worker_address(address).root() };
-
         let global = worker.global.root();
-
         let mut message = UndefinedValue();
         unsafe {
             assert!(JS_ReadStructuredClone(
@@ -102,7 +100,6 @@ impl Worker {
                 JS_STRUCTURED_CLONE_VERSION, &mut message,
                 ptr::null(), ptr::null_mut()) != 0);
         }
-
         let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
         MessageEvent::dispatch_jsval(target, &global.root_ref(), message);
     }
@@ -117,22 +114,15 @@ impl Worker {
                colno: u32,
                error: JSVal) {
         let worker = unsafe { JS::from_trusted_worker_address(address).root() };
-
         let global = worker.global.root();
-
 	let global_ref = global.root_ref();
-        
         let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
-	
 	let errorevent = ErrorEvent::new(&global_ref, type_,
                                 can_bubble, cancelable,
                                 message, filename,
                                 lineno, colno, error).root();
-       
         let event: JSRef<Event> = EventCast::from_ref(*errorevent);
-
         target.dispatch_event_with_target(Some(target), event).unwrap();
-        
     }
 }
 

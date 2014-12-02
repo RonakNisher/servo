@@ -1,7 +1,8 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-use dom::bindings::codegen::Bindings::ErrorEventBinding;
+use dom::errorevent::ErrorEvent;
+use dom::bindings::codegen::Bindings::ErrorEventBinding::ErrorEventMethods;
 use dom::bindings::codegen::Bindings::DedicatedWorkerGlobalScopeBinding;
 use dom::bindings::codegen::Bindings::DedicatedWorkerGlobalScopeBinding::DedicatedWorkerGlobalScopeMethods;
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
@@ -23,9 +24,7 @@ use script_task::{ScriptMsg, DOMMessage, XHRProgressMsg, WorkerRelease};
 use script_task::WorkerPostMessage;
 use script_task::WorkerDispatchErrorEvent;
 use script_task::StackRootTLS;
-
 use servo_net::resource_task::{ResourceTask, load_whole_resource};
-
 use js::glue::JS_STRUCTURED_CLONE_VERSION;
 use js::jsapi::{JSContext, JS_ReadStructuredClone, JS_WriteStructuredClone};
 use js::jsval::{JSVal, UndefinedValue};
@@ -186,8 +185,9 @@ impl<'a> DedicatedWorkerGlobalScopeMethods for JSRef<'a, DedicatedWorkerGlobalSc
 
 trait PrivateDedicatedWorkerGlobalScopeHelpers {
     fn delayed_release_worker(self);
-    fn SendMessage(self,type_: DOMString,
-                       init: &ErrorEventBinding::ErrorEventInit);
+    fn dispatch_error_to_worker(self, cx: *mut JSContext,
+		       type_: DOMString,
+                       JSRef<ErrorEvent>);
 }
 
 impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerGlobalScope> {
@@ -195,19 +195,19 @@ impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerG
         let ScriptChan(ref sender) = self.parent_sender;
         sender.send(WorkerRelease(self.worker));
     }
-    fn SendMessage(self, type_: DOMString,
-                       init: &ErrorEventBinding::ErrorEventInit) {
-	let msg = "msg".to_string();
-	let file_name = "filename".to_string();
-	let line_num = 0;
-	let col_num = 0;
-
-//      let mut data = ptr::null_mut(); //here, initialize data with the parameters required to create the ErrorEvent
+    fn dispatch_error_to_worker(self, cx: *mut JSContext, 
+		       type_: DOMString,
+                       errorevent: JSRef<ErrorEvent>) {
+	let msg = errorevent.Message();
+	let file_name = errorevent.Filename();
+	let line_num = errorevent.Lineno();
+	let col_num = errorevent.Colno();
+	let error = errorevent.Error(cx);
 	let ScriptChan(ref sender) = self.parent_sender;
         sender.send(WorkerDispatchErrorEvent(self.worker, 
-				type_,init.parent.bubbles, init.parent.cancelable,
+				type_,true, true,
                                 msg, file_name,
-                                line_num, col_num, init.error));
+                                line_num, col_num, error));
     }
 }
 

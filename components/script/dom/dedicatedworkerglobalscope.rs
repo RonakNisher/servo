@@ -1,13 +1,15 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
+use dom::bindings::codegen::Bindings::ErrorEventBinding;
 use dom::bindings::codegen::Bindings::DedicatedWorkerGlobalScopeBinding;
 use dom::bindings::codegen::Bindings::DedicatedWorkerGlobalScopeBinding::DedicatedWorkerGlobalScopeMethods;
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::InheritTypes::DedicatedWorkerGlobalScopeDerived;
 use dom::bindings::codegen::InheritTypes::{EventTargetCast, WorkerGlobalScopeCast};
 use dom::bindings::global;
+//use dom::bindings::global::GlobalRef;
+use servo_util::str::DOMString;
 use dom::bindings::js::{JSRef, Temporary, RootCollection};
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::eventtarget::{EventTarget, EventTargetHelpers};
@@ -121,7 +123,7 @@ impl DedicatedWorkerGlobalScope {
                 WorkerGlobalScopeCast::from_ref(*global);
             let target: JSRef<EventTarget> =
                 EventTargetCast::from_ref(*global);
-            loop {
+	    loop {
                 match global.receiver.recv_opt() {
                     Ok(DOMMessage(data, nbytes)) => {
                         let mut message = UndefinedValue();
@@ -141,8 +143,14 @@ impl DedicatedWorkerGlobalScope {
                     Ok(WorkerPostMessage(addr, data, nbytes)) => {
                         Worker::handle_message(addr, data, nbytes);
                     },
-                    Ok(WorkerDispatchErrorEvent(addr, data, nbytes)) => {
-                        Worker::handle_message(addr, data, nbytes);
+                    Ok(WorkerDispatchErrorEvent(addr, 
+						type_,bubbles, cancelable,
+					        msg, file_name,
+					        line_num, col_num, error)) => {
+                        Worker::handle_error_message(addr, 
+						type_,bubbles, cancelable,
+					        msg, file_name,
+					        line_num, col_num, error);
                     },
                     Ok(WorkerRelease(addr)) => {
                         Worker::handle_release(addr)
@@ -180,7 +188,8 @@ impl<'a> DedicatedWorkerGlobalScopeMethods for JSRef<'a, DedicatedWorkerGlobalSc
 
 trait PrivateDedicatedWorkerGlobalScopeHelpers {
     fn delayed_release_worker(self);
-    fn SendMessage(self, cx: *mut JSContext, message: JSVal);
+    fn SendMessage(self,type_: DOMString,
+                       init: &ErrorEventBinding::ErrorEventInit);
 }
 
 impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerGlobalScope> {
@@ -188,17 +197,19 @@ impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerG
         let ScriptChan(ref sender) = self.parent_sender;
         sender.send(WorkerRelease(self.worker));
     }
-    fn SendMessage(self, cx: *mut JSContext, message: JSVal) {
+    fn SendMessage(self, type_: DOMString,
+                       init: &ErrorEventBinding::ErrorEventInit) {
+	let msg = "msg".to_string();
+	let file_name = "filename".to_string();
+	let line_num = 0;
+	let col_num = 0;
 
-        let mut data = ptr::null_mut(); //here, initialize data with the parameters required to create the ErrorEvent
-
-        let mut nbytes = 0;
-        unsafe {
-            assert!(JS_WriteStructuredClone(cx, message, &mut data, &mut nbytes,
-                                            ptr::null(), ptr::null_mut()) != 0);
-        }
-        let ScriptChan(ref sender) = self.parent_sender;
-        sender.send(WorkerDispatchErrorEvent(self.worker, data, nbytes));
+//      let mut data = ptr::null_mut(); //here, initialize data with the parameters required to create the ErrorEvent
+	let ScriptChan(ref sender) = self.parent_sender;
+        sender.send(WorkerDispatchErrorEvent(self.worker, 
+				type_,init.parent.bubbles, init.parent.cancelable,
+                                msg, file_name,
+                                line_num, col_num, init.error));
     }
 }
 

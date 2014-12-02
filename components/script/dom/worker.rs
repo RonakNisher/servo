@@ -1,6 +1,14 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+//use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
+//use dom::bindings::codegen::Bindings::ErrorEventBinding;
+//use dom::bindings::codegen::Bindings::ErrorEventBinding::ErrorEventMethods;
+//use dom::event::Event;
+//use dom::bindings::codegen::InheritTypes::EventCast;
+//use dom::errorevent::ErrorEvent;
+//use dom::bindings::global;
+//use dom::window::Window;
 
 use dom::bindings::codegen::Bindings::WorkerBinding;
 use dom::bindings::codegen::Bindings::WorkerBinding::WorkerMethods;
@@ -99,22 +107,29 @@ impl Worker {
         MessageEvent::dispatch_jsval(target, &global.root_ref(), message);
     }
 
-   pub fn handle_error_message(address: TrustedWorkerAddress,
-                          data: *mut u64, nbytes: size_t) {
+   pub fn handle_error_message(address: TrustedWorkerAddress, 
+               type_: DOMString,
+               can_bubble: bool,
+               cancelable: bool,
+               message: DOMString,
+               filename: DOMString,
+               lineno: u32,
+               colno: u32,
+               error: JSVal) {
         let worker = unsafe { JS::from_trusted_worker_address(address).root() };
 
         let global = worker.global.root();
-
+	//let global_ref = global.root_ref();
         let mut message = UndefinedValue();
-        unsafe {
-            assert!(JS_ReadStructuredClone(
-                global.root_ref().get_cx(), data as *const u64, nbytes,
-                JS_STRUCTURED_CLONE_VERSION, &mut message,
-                ptr::null(), ptr::null_mut()) != 0);
-        }
+        
 
         let target: JSRef<EventTarget> = EventTargetCast::from_ref(*worker);
-        MessageEvent::dispatch_jsval(target, &global.root_ref(), message);
+	//let errorevent = ErrorEvent::new(
+       //     scope, "message".to_string(), false, false, message,
+        //    "".to_string(), "".to_string()).root();
+       // let event: JSRef<Event> = EventCast::from_ref(*errorevent);
+       // target.dispatch_event_with_target(None, event).unwrap();
+        
     }
 }
 
